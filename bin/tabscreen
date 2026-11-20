@@ -1,11 +1,13 @@
 #!/usr/bin/python3
-"""Start tabscreen-host over USB (and Wi-Fi with --wifi) and set the tablet's virtual monitor to SCALE.
+"""Start tabscreen-host over USB (and Wi-Fi with --wifi) and set the tablet's virtual monitor to --scale.
 
 GNOME recreates the virtual monitor at 100 % on every connection, so the scale
 is applied each time a new Meta-* monitor appears. A scale changed by hand in
-Settings afterwards is left alone. Extra arguments go to tabscreen-host.
+Settings afterwards is left alone. --scale N (default 2) is ours; every other
+argument goes to tabscreen-host.
 DEFAULTS apply unless the arguments give that option, e.g. --capture cpu.
 """
+import argparse
 import subprocess
 import sys
 from pathlib import Path
@@ -31,7 +33,9 @@ def virtual_connectors(bus):
 def main():
     bus = Gio.bus_get_sync(Gio.BusType.SESSION)
     seen = virtual_connectors(bus)  # monitors that existed before us are not ours
-    args = sys.argv[1:]
+    parser = argparse.ArgumentParser(allow_abbrev=False, add_help=False)
+    parser.add_argument("--scale", type=float, default=SCALE)
+    ours, args = parser.parse_known_args()
     defaults = dict(DEFAULTS)
     if "--wifi" in args:
         del defaults["--bitrate"]  # the host's own default is sized for Wi-Fi
@@ -45,7 +49,7 @@ def main():
         nonlocal seen
         current = virtual_connectors(bus)
         for connector in current - seen:
-            subprocess.run([sys.executable, "-I", SET_SCALE, connector, str(SCALE)], check=False)
+            subprocess.run([sys.executable, "-I", SET_SCALE, connector, str(ours.scale)], check=False)
         seen = current  # a disconnected monitor drops out, so its reconnect gets scaled again
 
     bus.signal_subscribe(DC[0], DC[2], "MonitorsChanged", DC[1], None, Gio.DBusSignalFlags.NONE, on_monitors_changed)

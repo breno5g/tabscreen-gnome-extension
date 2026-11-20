@@ -1,7 +1,7 @@
 {
   "uuid": "tabscreen@breno5g",
   "name": "TabScreen",
-  "description": "Quick Settings toggle that starts and stops tabscreen-host, picks CPU or GPU capture and turns on Wi-Fi",
+  "description": "Quick Settings toggle that starts and stops tabscreen-host and holds its settings: capture, resolution, frame rate, bitrate, scale and Wi-Fi",
   "shell-version": [
     "50"
   ],

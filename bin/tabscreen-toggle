@@ -8,13 +8,13 @@ if pkill -INT -x tabscreen-host; then
         sleep 1
     done
     if pkill -KILL -x tabscreen-host; then
-        notify-send -i video-display TabScreen "Desligado à força (travou ao parar — veja ${XDG_RUNTIME_DIR:-/tmp}/tabscreen.log)"
+        notify-send -i video-display TabScreen "Forced off: it got stuck while stopping. See ${XDG_RUNTIME_DIR:-/tmp}/tabscreen.log"
     else
-        notify-send -i video-display TabScreen "Desligado"
+        notify-send -i video-display TabScreen "Off"
     fi
 else
     log="${XDG_RUNTIME_DIR:-/tmp}/tabscreen.log"
-    notify-send -i video-display TabScreen "Ligado — abrindo no tablet"
+    notify-send -i video-display TabScreen "On. Opening on the tablet."
     "$HOME/.local/bin/tabscreen" "$@" >"$log" 2>&1 ||
-        notify-send -u critical -i video-display TabScreen "Parou com erro — veja $log"
+        notify-send -u critical -i video-display TabScreen "Stopped with an error. See $log"
 fi
