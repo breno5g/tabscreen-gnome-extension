@@ -1,0 +1,20 @@
+#!/bin/sh
+# Toggle tabscreen (used by the TabScreen Quick Settings extension): stop it if running, otherwise start it.
+# SIGINT is the host's Ctrl+C path, so it removes the virtual monitor cleanly.
+if pkill -INT -x tabscreen-host; then
+    # A host stuck while stopping would keep the toggle "on" forever; Mutter drops its monitor when it dies.
+    for _ in 1 2 3 4 5; do
+        pgrep -x tabscreen-host >/dev/null || break
+        sleep 1
+    done
+    if pkill -KILL -x tabscreen-host; then
+        notify-send -i video-display TabScreen "Desligado à força (travou ao parar — veja ${XDG_RUNTIME_DIR:-/tmp}/tabscreen.log)"
+    else
+        notify-send -i video-display TabScreen "Desligado"
+    fi
+else
+    log="${XDG_RUNTIME_DIR:-/tmp}/tabscreen.log"
+    notify-send -i video-display TabScreen "Ligado — abrindo no tablet"
+    "$HOME/.local/bin/tabscreen" "$@" >"$log" 2>&1 ||
+        notify-send -u critical -i video-display TabScreen "Parou com erro — veja $log"
+fi

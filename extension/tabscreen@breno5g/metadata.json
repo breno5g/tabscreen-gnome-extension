@@ -1,0 +1,9 @@
+{
+  "uuid": "tabscreen@breno5g",
+  "name": "TabScreen",
+  "description": "Quick Settings toggle that starts and stops tabscreen-host and picks CPU or GPU capture",
+  "shell-version": [
+    "50"
+  ],
+  "url": "https://github.com/breno5g/tabscreen-gnome-extension"
+}

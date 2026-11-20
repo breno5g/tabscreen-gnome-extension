@@ -1,0 +1,63 @@
+#!/usr/bin/python3
+"""Start tabscreen-host over USB and set the tablet's virtual monitor to SCALE.
+
+GNOME recreates the virtual monitor at 100 % on every connection, so the scale
+is applied each time a new Meta-* monitor appears. A scale changed by hand in
+Settings afterwards is left alone. Extra arguments go to tabscreen-host.
+DEFAULTS apply unless the arguments give that option, e.g. --capture cpu.
+"""
+import subprocess
+import sys
+from pathlib import Path
+
+from gi.repository import Gio, GLib
+
+SCALE = 2
+DEFAULTS = {
+    "--bitrate": "30000",  # the host's 12000 is sized for Wi-Fi; USB has room for sharper text
+    "--capture": "gpu",  # on the tablet: a third of the CPU and less power than cpu, same fps
+}
+TABSCREEN = Path.home() / "Development/projects/tabscreen"
+HOST = TABSCREEN / "host/target/release/tabscreen-host"
+SET_SCALE = TABSCREEN / "scripts/set_scale.py"
+DC = ("org.gnome.Mutter.DisplayConfig", "/org/gnome/Mutter/DisplayConfig", "org.gnome.Mutter.DisplayConfig")
+
+
+def virtual_connectors(bus):
+    _serial, monitors, _logical, _props = bus.call_sync(*DC, "GetCurrentState", None, None, 0, -1, None).unpack()
+    return {spec[0] for spec, _modes, _mprops in monitors if spec[0].startswith("Meta-")}
+
+
+def main():
+    bus = Gio.bus_get_sync(Gio.BusType.SESSION)
+    seen = virtual_connectors(bus)  # monitors that existed before us are not ours
+    args = sys.argv[1:]
+    # The host rejects a repeated option, so only add a default the caller didn't give.
+    for option, value in DEFAULTS.items():
+        if not any(a == option or a.startswith(f"{option}=") for a in args):
+            args = [option, value, *args]
+    host = subprocess.Popen([HOST, "--usb", *args])
+
+    def on_monitors_changed(*_):
+        nonlocal seen
+        current = virtual_connectors(bus)
+        for connector in current - seen:
+            subprocess.run([sys.executable, "-I", SET_SCALE, connector, str(SCALE)], check=False)
+        seen = current  # a disconnected monitor drops out, so its reconnect gets scaled again
+
+    bus.signal_subscribe(DC[0], DC[2], "MonitorsChanged", DC[1], None, Gio.DBusSignalFlags.NONE, on_monitors_changed)
+    loop = GLib.MainLoop()
+    GLib.timeout_add_seconds(1, lambda: host.poll() is None or loop.quit())
+    try:
+        loop.run()
+    except KeyboardInterrupt:
+        pass
+    finally:
+        if host.poll() is None:
+            host.terminate()
+        host.wait()
+    return host.returncode
+
+
+if __name__ == "__main__":
+    sys.exit(main())
