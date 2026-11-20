@@ -8,6 +8,7 @@ argument goes to tabscreen-host.
 DEFAULTS apply unless the arguments give that option, e.g. --capture cpu.
 """
 import argparse
+import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -19,15 +20,38 @@ DEFAULTS = {
     "--bitrate": "30000",  # the host's 12000 is sized for Wi-Fi; USB has room for sharper text
     "--capture": "gpu",  # on the tablet: a third of the CPU and less power than cpu, same fps
 }
-TABSCREEN = Path.home() / "Development/projects/tabscreen"
-HOST = TABSCREEN / "host/target/release/tabscreen-host"
-SET_SCALE = TABSCREEN / "scripts/set_scale.py"
+# install.sh links it into ~/.local/bin, which isn't on PATH in every GNOME session.
+HOST = shutil.which("tabscreen-host") or Path.home() / ".local/bin/tabscreen-host"
 DC = ("org.gnome.Mutter.DisplayConfig", "/org/gnome/Mutter/DisplayConfig", "org.gnome.Mutter.DisplayConfig")
+TEMPORARY = 1  # ApplyMonitorsConfig method: not saved to monitors.xml
 
 
 def virtual_connectors(bus):
     _serial, monitors, _logical, _props = bus.call_sync(*DC, "GetCurrentState", None, None, 0, -1, None).unpack()
     return {spec[0] for spec, _modes, _mprops in monitors if spec[0].startswith("Meta-")}
+
+
+def set_scale(bus, connector, wanted):
+    """Give `connector` the supported scale nearest `wanted`."""
+    serial, monitors, logical, _props = bus.call_sync(*DC, "GetCurrentState", None, None, 0, -1, None).unpack()
+    current = {}  # connector -> (mode id, scales it supports)
+    for (conn, *_), modes, _mprops in monitors:
+        for mode_id, _w, _h, _refresh, _preferred, scales, mode_props in modes:
+            if mode_props.get("is-current"):
+                current[conn] = (mode_id, scales)
+    if connector not in current:
+        print(f"scale: {connector} has no active mode", flush=True)
+        return
+    scale = min(current[connector][1], key=lambda s: abs(s - wanted))
+    config = []
+    for x, y, old, transform, primary, mons, _lprops in logical:
+        conns = [m[0] for m in mons]
+        config.append((x, y, scale if connector in conns else old, transform, primary,
+                       [(c, current[c][0], {}) for c in conns]))
+    config_type = "(uua(iiduba(ssa{sv}))a{sv})"
+    bus.call_sync(*DC, "ApplyMonitorsConfig", GLib.Variant(config_type, (serial, TEMPORARY, config, {})),
+                  None, 0, -1, None)
+    print(f"scale: {connector} at {scale}", flush=True)
 
 
 def main():
@@ -49,7 +73,10 @@ def main():
         nonlocal seen
         current = virtual_connectors(bus)
         for connector in current - seen:
-            subprocess.run([sys.executable, "-I", SET_SCALE, connector, str(ours.scale)], check=False)
+            try:
+                set_scale(bus, connector, ours.scale)
+            except GLib.Error as e:  # e.g. the monitor went away meanwhile
+                print(f"scale: {connector}: {e.message}", flush=True)
         seen = current  # a disconnected monitor drops out, so its reconnect gets scaled again
 
     bus.signal_subscribe(DC[0], DC[2], "MonitorsChanged", DC[1], None, Gio.DBusSignalFlags.NONE, on_monitors_changed)

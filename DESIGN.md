@@ -8,8 +8,9 @@ tablet screen on or off in one click, with the options already right.
 
 ## Audience and voice
 
-- The author, on their own tablet (2800×1752, 120 Hz, S Pen) and laptop
-  (GNOME 50, Wayland, NVIDIA). A personal tool, no other users (assumed).
+- The author first, on their own tablet (2800×1752, 120 Hz, S Pen) and laptop
+  (GNOME 50, Wayland, NVIDIA); the repository is public, so anyone who builds
+  TabScreen and installs it from GitHub.
 - Interface text in English: short labels, sentence case, the current value
   visible without opening anything.
 - Notifications say what happened and, on errors, what to do next.
@@ -62,6 +63,9 @@ custom CSS; icons come from the symbolic icon theme (`video-display-symbolic`).
   settings wouldn't fit the tile.
 - 2026-11-20 — Values on the rows use the menu's normal text style: the Shell
   theme has no secondary-text class, and the brief rules out custom CSS.
+
+- 2026-11-20 — Public on GitHub under MIT, like TabScreen. Not on
+  extensions.gnome.org: it depends on a separately built `tabscreen-host`.
 
 ## Open questions
 

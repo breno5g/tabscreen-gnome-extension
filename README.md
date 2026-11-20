@@ -10,13 +10,17 @@ holds its settings: capture, resolution, frame rate, bitrate and scale.
 |---|---|
 | `extension/tabscreen@breno5g/` | GNOME Shell extension. The toggle starts or stops the host; its menu holds the settings, one file each in `~/.config/tabscreen/` (`capture`, `resolution`, `fps`, `bitrate`, `scale`, `wifi`), and restarts a running host when one changes |
 | `bin/tabscreen-toggle` | Starts the host if it isn't running, otherwise stops it (Ctrl+C, then SIGKILL after 5 s). Logs to `$XDG_RUNTIME_DIR/tabscreen.log` |
-| `bin/tabscreen` | Runs `tabscreen-host --usb` with defaults (`--capture gpu`, `--bitrate 30000`; with `--wifi`, the host's 12000) and sets each new virtual monitor to `--scale` (default 2, i.e. 200 %) |
+| `bin/tabscreen` | Runs `tabscreen-host --usb` (from `PATH` or `~/.local/bin`) with defaults (`--capture gpu`, `--bitrate 30000`; with `--wifi`, the host's 12000) and sets each new virtual monitor to `--scale` (default 2, i.e. 200 %) |
 
 ## Requirements
 
-- GNOME Shell 50 on Wayland
-- TabScreen built at `~/Development/projects/tabscreen` (`cargo build --release`
-  in `host/`), recent enough to have `--max-fps`. `bin/tabscreen` uses that path.
+- GNOME Shell 50 on Wayland, with Python 3 and PyGObject (`python3-gi`) for
+  `bin/tabscreen`
+- `tabscreen-host` built from [breno5g/tabscreen](https://github.com/breno5g/tabscreen)
+  (`cargo build --release` in `host/`; see its README for dependencies). The
+  menu passes `--max-fps`, which older builds and upstream releases don't have.
+- `adb` and an Android tablet with USB debugging for the cable; Chrome on the
+  tablet.
 - GPU capture needs an NVIDIA GPU with NVENC; pick CPU in the menu otherwise.
 - For Wi-Fi: `qrencode` to show the link as a QR code (optional; the link is
   copied either way), and port 8766 open if a firewall is active, e.g.
@@ -25,12 +29,15 @@ holds its settings: capture, resolution, frame rate, bitrate and scale.
 ## Install
 
 ```sh
-./install.sh
+git clone https://github.com/breno5g/tabscreen-gnome-extension
+cd tabscreen-gnome-extension
+./install.sh /path/to/tabscreen/host/target/release/tabscreen-host
 ```
 
-It links the extension and both scripts from this repo into
-`~/.local/share/gnome-shell/extensions/` and `~/.local/bin/`, so edits here take
-effect. Log out and back in afterwards: GNOME on Wayland only loads extension
+It links the extension, both scripts and `tabscreen-host` into
+`~/.local/share/gnome-shell/extensions/` and `~/.local/bin/`, so edits and
+rebuilds take effect. Leave out the path if `tabscreen-host` is already on your
+`PATH`. Log out and back in afterwards: GNOME on Wayland only loads extension
 code at login.
 
 ## Use
