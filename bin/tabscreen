@@ -1,5 +1,5 @@
 #!/usr/bin/python3
-"""Start tabscreen-host over USB and set the tablet's virtual monitor to SCALE.
+"""Start tabscreen-host over USB (and Wi-Fi with --wifi) and set the tablet's virtual monitor to SCALE.
 
 GNOME recreates the virtual monitor at 100 % on every connection, so the scale
 is applied each time a new Meta-* monitor appears. A scale changed by hand in
@@ -32,8 +32,11 @@ def main():
     bus = Gio.bus_get_sync(Gio.BusType.SESSION)
     seen = virtual_connectors(bus)  # monitors that existed before us are not ours
     args = sys.argv[1:]
+    defaults = dict(DEFAULTS)
+    if "--wifi" in args:
+        del defaults["--bitrate"]  # the host's own default is sized for Wi-Fi
     # The host rejects a repeated option, so only add a default the caller didn't give.
-    for option, value in DEFAULTS.items():
+    for option, value in defaults.items():
         if not any(a == option or a.startswith(f"{option}=") for a in args):
             args = [option, value, *args]
     host = subprocess.Popen([HOST, "--usb", *args])
